@@ -9,18 +9,21 @@ import {
   useIsRecording,
 } from '@livekit/components-react';
 import styles from '../styles/SettingsMenu.module.css';
-/**
- * @alpha
- */
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import {
+  processingRecRequest as processRecReq,
+  setRecRequest,
+  toggleRecording,
+} from '@/lib/features/recording/recordingSlice';
+
 export interface SettingsMenuProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-/**
- * @alpha
- */
 export function SettingsMenu(props: SettingsMenuProps) {
+  const dispatch = useAppDispatch();
+  const processingRecRequest = useAppSelector(processRecReq);
   const layoutContext = useMaybeLayoutContext();
   const room = useRoomContext();
-  const recordingEndpoint = process.env.NEXT_PUBLIC_LK_RECORD_ENDPOINT;
+  const recordingEndpoint = '/api/record';
 
   const settings = React.useMemo(() => {
     return {
@@ -37,38 +40,20 @@ export function SettingsMenu(props: SettingsMenuProps) {
 
   const isRecording = useIsRecording();
   const [initialRecStatus, setInitialRecStatus] = React.useState(isRecording);
-  const [processingRecRequest, setProcessingRecRequest] = React.useState(false);
 
   React.useEffect(() => {
     if (initialRecStatus !== isRecording) {
-      setProcessingRecRequest(false);
+      dispatch(setRecRequest(false));
     }
   }, [isRecording, initialRecStatus]);
 
   const toggleRoomRecording = async () => {
-    if (!recordingEndpoint) {
-      throw TypeError('No recording endpoint specified');
-    }
-    if (room.isE2EEEnabled) {
-      throw Error('Recording of encrypted meetings is currently not supported');
-    }
-    setProcessingRecRequest(true);
+    dispatch(setRecRequest(true));
     setInitialRecStatus(isRecording);
-    let response: Response;
-    if (isRecording) {
-      response = await fetch(recordingEndpoint + `/stop?roomName=${room.name}`);
-    } else {
-      response = await fetch(recordingEndpoint + `/start?roomName=${room.name}`);
+    if (recordingEndpoint) {
+      dispatch(toggleRecording({ isRecording, roomName: room.name, recordingEndpoint }));
     }
-    if (response.ok) {
-    } else {
-      console.error(
-        'Error handling recording request, check server logs:',
-        response.status,
-        response.statusText
-      );
-      setProcessingRecRequest(false);
-    }
+    dispatch(setRecRequest(false));
   };
 
   return (

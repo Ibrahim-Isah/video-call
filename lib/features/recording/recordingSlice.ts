@@ -1,29 +1,60 @@
-import { createAppSlice } from "@/lib/createAppSlice";
+import { createAppSlice } from '@/lib/createAppSlice';
+import { PayloadAction } from '@reduxjs/toolkit';
+import { toggleRoomRecording } from './recordingAPI';
 
-export interface RecordingSliceState {
+interface RecordingState {
   isRecording: boolean;
+  processingRecRequest: boolean;
+  error: string | null;
 }
 
-const initialState: RecordingSliceState = {
-  isRecording: false
+const initialState: RecordingState = {
+  isRecording: false,
+  processingRecRequest: false,
+  error: null,
 };
 
 export const recordingSlice = createAppSlice({
   name: 'recording',
   initialState,
   reducers: (create) => ({
-    startRecording: create.reducer((state) => {
-      state.isRecording = true;
+    setRecRequest: create.reducer((state, action: PayloadAction<boolean>) => {
+      state.processingRecRequest = action.payload;
     }),
-    stopRecording: create.reducer((state) => {
-      state.isRecording = false;
-    })
+    toggleRecording: create.asyncThunk(
+      async ({
+        isRecording,
+        roomName,
+        recordingEndpoint,
+      }: {
+        isRecording: boolean;
+        roomName: string;
+        recordingEndpoint: string;
+      }) => {
+        const response = await toggleRoomRecording({ isRecording, roomName, recordingEndpoint });
+
+        return response;
+      },
+      {
+        pending: (state) => {
+          state.processingRecRequest = true;
+        },
+        fulfilled: (state, action: PayloadAction<boolean>) => {
+          state.isRecording = action.payload;
+          state.processingRecRequest = false;
+        },
+        rejected: (state) => {
+          state.error = 'Failed to toggle recording';
+          state.processingRecRequest = false;
+        },
+      }
+    ),
   }),
   selectors: {
-    recording: (record) => record.isRecording
+    processingRecRequest: (state) => state.processingRecRequest,
   }
 });
 
-export const { startRecording, stopRecording } =
-  recordingSlice.actions;
-export const { recording } = recordingSlice.selectors;
+export const { setRecRequest, toggleRecording } = recordingSlice.actions;
+
+export const { processingRecRequest } = recordingSlice.selectors

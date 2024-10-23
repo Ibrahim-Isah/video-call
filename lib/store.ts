@@ -1,9 +1,8 @@
 import type { Action, ThunkAction } from "@reduxjs/toolkit";
 import { combineSlices, configureStore } from "@reduxjs/toolkit";
-import { roomSlice } from "./features/room/roomSlice";
 import { recordingSlice } from "./features/recording/recordingSlice";
 
-const rootReducer = combineSlices( roomSlice, recordingSlice);
+const rootReducer = combineSlices(recordingSlice);
 export type RootState = ReturnType<typeof rootReducer>;
 
 export const makeStore = () => {
